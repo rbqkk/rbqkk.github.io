@@ -6,24 +6,24 @@ let playInterval = null;
 
 // Activity color mapping
 const activityColors = {
-    'CP': '#1E88E5',  // Concrete Pouring - 深蓝色
-    'IV': '#43A047',  // Inspection & Verification - 深绿色
-    'WAT': '#C62828', // Walking & Transportation - 保持不变
-    'TRL': '#7B1FA2', // Tool Retrieval - 紫色
-    'CMI': '#FB8C00', // Construction Material Installation - 橙色
-    'CSD': '#FF6B6B', // Construction Site Documentation - 深红色
-    'SCD': '#00ACC1'  // Site Condition Documentation - 青色
+    'CP': '#FF6B6B',  // Concrete Pouring
+    'IV': '#4ECDC4',  // Inspection & Verification
+    'WAT': '#45B7D1', // Walking & Transportation
+    'TRL': '#96CEB4', // Tool Retrieval
+    'CMI': '#FFBE0B', // Construction Material Installation
+    'CSD': '#FF9F1C', // Construction Site Documentation
+    'SCD': '#D4A373'  // Site Condition Documentation
 };
 
 // Activity descriptions
 const activityDescriptions = {
     'CP': 'Concrete Pouring',
-    'IV': 'Internal Vibration',
-    'CMI': 'Curing Menbrane Installation',
-    'CSD': 'Consolidation',
-    'SCD': 'Screeding',
-    'WAT': 'Waiting',
-    'TRL': 'Traveling',
+    'IV': 'Inspection & Verification',
+    'WAT': 'Walking & Transportation',
+    'TRL': 'Tool Retrieval',
+    'CMI': 'Construction Material Installation',
+    'CSD': 'Construction Site Documentation',
+    'SCD': 'Site Condition Documentation'
 };
 
 // Load data
@@ -139,33 +139,17 @@ function drawPositionView(hoveredWorker = null) {
         const x = scaleX(worker.position.x);
         const y = scaleY(worker.position.y);
 
-        // Draw worker position circle
         ctx.beginPath();
-        ctx.arc(x, y, 6, 0, Math.PI * 2);
-        const rgb = hexToRgb(activityColors[worker.activity]);
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
         ctx.fillStyle = workerId === hoveredWorker ? 
             activityColors[worker.activity] : 
-            `rgba(${rgb}, 0.8)`;
+            `rgba(${hexToRgb(activityColors[worker.activity])}, 0.6)`;
         ctx.fill();
 
-        // Add stroke to make the circle more visible
-        ctx.strokeStyle = activityColors[worker.activity];
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
         if (workerId === hoveredWorker) {
-            ctx.font = '14px Times New Roman';
+            ctx.font = '12px Times New Roman';
             ctx.fillStyle = '#333';
-            const text = `${workerId}: ${activityDescriptions[worker.activity]}`;
-            const metrics = ctx.measureText(text);
-            
-            // Draw text background
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(x + 12, y - 25, metrics.width + 8, 20);
-            
-            // Draw text
-            ctx.fillStyle = '#333';
-            ctx.fillText(text, x + 16, y - 10);
+            ctx.fillText(`${workerId}: ${activityDescriptions[worker.activity]}`, x + 10, y - 10);
         }
     });
 }
@@ -218,8 +202,7 @@ function setupTimelineView() {
     // Create scales
     const xScale = d3.scaleLinear()
         .domain([0, data.frames.length - 1])
-        .range([0, width])
-        .nice();
+        .range([0, width]);
 
     const yScale = d3.scaleBand()
         .domain(Object.keys(data.frames[0].workers).sort())
@@ -523,64 +506,59 @@ function stopPlayback() {
 // Update visualization
 function updateVisualization(frameIndex) {
     if (!data || !data.frames) return;
-
-    // Update position view
     drawPositionView();
     
     // Update timeline position indicator
     const svg = d3.select('#timeline-view svg');
-    if (!svg.empty()) {
-        svg.selectAll('.timeline-indicator').remove();
-        
-        const margin = {top: 20, right: 20, bottom: 30, left: 50};
-        const width = svg.node().parentNode.clientWidth - margin.left - margin.right;
-        
-        const xScale = d3.scaleLinear()
-            .domain([0, data.frames.length - 1])
-            .range([0, width]);
-        
-        // Get current zoom transform
-        const currentZoom = d3.zoomTransform(svg.node()) || d3.zoomIdentity;
-        const newXScale = currentZoom.rescaleX(xScale);
-        
-        // Add timeline indicator
-        svg.append('line')
-            .attr('class', 'timeline-indicator')
-            .attr('x1', newXScale(frameIndex))
-            .attr('x2', newXScale(frameIndex))
-            .attr('y1', 0)
-            .attr('y2', svg.node().parentNode.clientHeight - margin.top - margin.bottom)
-            .attr('stroke', '#ff0000')
-            .attr('stroke-width', 2)
-            .attr('transform', `translate(${margin.left},${margin.top})`);
+    svg.selectAll('.timeline-indicator').remove();
+    
+    const margin = {top: 20, right: 20, bottom: 30, left: 50};
+    const width = svg.node().parentNode.clientWidth - margin.left - margin.right;
+    
+    const xScale = d3.scaleLinear()
+        .domain([0, data.frames.length - 1])
+        .range([0, width]);
+    
+    // Get current zoom transform and create new scale
+    const currentZoom = d3.zoomTransform(svg.node());
+    const newXScale = currentZoom.rescaleX(xScale);
+    const zoomK = currentZoom.k;
+    
+    // Add timeline indicator
+    svg.append('line')
+        .attr('class', 'timeline-indicator')
+        .attr('x1', newXScale(frameIndex))
+        .attr('x2', newXScale(frameIndex))
+        .attr('y1', 0)
+        .attr('y2', svg.node().parentNode.clientHeight - margin.top - margin.bottom)
+        .attr('stroke', '#ff0000')
+        .attr('stroke-width', 2)
+        .attr('transform', `translate(${margin.left},${margin.top})`);
 
-        // Update x-axis with dynamic ticks
-        const tickCount = Math.max(5, Math.floor(width / 100));
-        const xAxis = d3.axisBottom(newXScale)
-            .tickFormat(i => {
-                const index = Math.round(i);
-                return data.frames[index]?.timestamp || '';
-            })
-            .ticks(tickCount);
+    // 根据缩放比例动态调整时间刻度的密度
+    const tickSpacing = Math.max(50, 100 / zoomK); // 基础刻度间距随缩放调整，设置最小间距
+    const tickCount = Math.max(5, Math.floor(width * zoomK / tickSpacing));
+    
+    // Update x-axis with dynamic ticks
+    const xAxis = d3.axisBottom(newXScale)
+        .tickFormat(i => {
+            const index = Math.round(i);
+            return data.frames[index]?.timestamp || '';
+        })
+        .ticks(tickCount);
 
-        svg.select('.x-axis')
-            .call(xAxis)
-            .selectAll('text')
-            .style('font-size', '12px');
-
-        // Ensure the current frame is visible in the timeline
-        const container = document.getElementById('timeline-view');
-        const currentX = newXScale(frameIndex);
-        const containerWidth = container.clientWidth;
-        const scrollLeft = currentX - containerWidth / 2;
-        container.scrollLeft = Math.max(0, scrollLeft);
-    }
+    svg.select('.x-axis')
+        .call(xAxis)
+        .selectAll('text')
+        .style('font-size', `${Math.max(10, 12 * Math.sqrt(zoomK))}px`); // 字体大小随缩放调整
 }
 
 // Helper function: convert hexadecimal color to RGB
 function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+    return result ? 
+        `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+        '0, 0, 0';
 }
 
 // Start app
