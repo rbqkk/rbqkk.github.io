@@ -6,24 +6,24 @@ let playInterval = null;
 
 // Activity color mapping
 const activityColors = {
-    'CP': '#FF6B6B',  // Concrete Pouring
-    'IV': '#4ECDC4',  // Inspection & Verification
-    'WAT': '#45B7D1', // Walking & Transportation
-    'TRL': '#96CEB4', // Tool Retrieval
-    'CMI': '#FFBE0B', // Construction Material Installation
-    'CSD': '#FF9F1C', // Construction Site Documentation
-    'SCD': '#D4A373'  // Site Condition Documentation
+    'CP': '#1E88E5',  // 
+    'IV': '#43A047',  // 
+    'WAT': '#C62828', // 
+    'TRL': '#7B1FA2', // 
+    'CMI': '#FB8C00', // 
+    'CSD': '#FF6B6B', // 
+    'SCD': '#00ACC1'  // 
 };
 
 // Activity descriptions
 const activityDescriptions = {
     'CP': 'Concrete Pouring',
-    'IV': 'Inspection & Verification',
-    'WAT': 'Walking & Transportation',
-    'TRL': 'Tool Retrieval',
-    'CMI': 'Construction Material Installation',
-    'CSD': 'Construction Site Documentation',
-    'SCD': 'Site Condition Documentation'
+    'IV': 'Internal Vibration',
+    'CMI': 'Curing Menbrane Installation',
+    'CSD': 'Consolidation',
+    'SCD': 'Screeding',
+    'WAT': 'Waiting',
+    'TRL': 'Traveling',
 };
 
 // Load data
